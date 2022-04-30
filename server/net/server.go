@@ -46,4 +46,5 @@ func (s *server) wsHandler(w http.ResponseWriter, r *http.Request) {
 	wsServer := NewWsServer(wsConn)
 	wsServer.Router(s.router)
 	wsServer.Start()
+	wsServer.Handshake()
 }

@@ -2,7 +2,7 @@ package net
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"log"
 	"sync"
 
@@ -43,7 +43,11 @@ func (w *wsServer) SetProperty(key string, value interface{}) {
 func (w *wsServer) GetProperty(key string) (interface{}, error) {
 	w.propertyLock.RLock()
 	defer w.propertyLock.RUnlock()
-	return w.property[key], nil
+	if value, ok := w.property[key]; ok {
+		return value, nil
+	} else {
+		return nil, errors.New("no property found")
+	}
 }
 
 func (w *wsServer) RemoveProperty(key string) {
@@ -76,20 +80,16 @@ func (w *wsServer) Start() {
 func (w *wsServer) writeMsgLoop() {
 
 	for {
-		select {
-		case msg := <-w.outChan:
-			err := w.writer(msg)
-			if err != nil {
-				log.Println("数据写入失败:", err)
-			}
-		default:
-			fmt.Println("")
+		msg := <-w.outChan
+		err := w.writer(msg)
+		if err != nil {
+			log.Println("数据写入失败:", err)
 		}
 	}
 }
 
 func (w *wsServer) writer(msg *WsMsgRsp) error {
-	data, err := json.Marshal(msg)
+	data, err := json.Marshal(msg.Body)
 	if err != nil {
 		log.Println(err)
 	}
@@ -149,6 +149,7 @@ func (w *wsServer) readMsgLoop() {
 			if err != nil {
 				log.Println("数据格式有误，解密失败:", err)
 				// 出错后发起握手
+				w.Handshake()
 			} else {
 				data = d
 			}
@@ -175,4 +176,31 @@ func (w *wsServer) readMsgLoop() {
 
 func (w *wsServer) Close() {
 	_ = w.WsConn.Close()
+}
+
+const HandshakeMsg = "handshake"
+
+func (w *wsServer) Handshake() {
+	var secretKey string
+	key, err := w.GetProperty(secretKey)
+	if err == nil {
+		secretKey = key.(string)
+	} else {
+		secretKey = utils.RandSeq(16)
+	}
+
+	// 发送secreKey给客户端
+	handshake := &Handshake{Key: secretKey}
+	body := &RspBody{Name: HandshakeMsg, Msg: handshake}
+	if data, err := json.Marshal(body); err == nil {
+		if secretKey != "" {
+			w.SetProperty("secretKey", secretKey)
+		} else {
+			w.RemoveProperty("secretKey")
+		}
+		// 压缩数据
+		if data, err = utils.Zip(data); err == nil {
+			w.WsConn.WriteMessage(websocket.BinaryMessage, data)
+		}
+	}
 }
