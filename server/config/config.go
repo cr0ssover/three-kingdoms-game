@@ -2,8 +2,12 @@ package config
 
 import (
 	"errors"
+	"flag"
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
+	"testing"
 
 	"gopkg.in/ini.v1"
 )
@@ -13,24 +17,27 @@ var configFile = "/conf/conf.ini"
 var File *ini.File
 
 func init() {
-	// 获取获取当前路径
-	crruentDir, err := os.Getwd()
+	// 获取获取配置路径
+	_, projectPath, _, _ := runtime.Caller(0)
+	projectPath, err := filepath.Abs(filepath.Dir(filepath.Dir(projectPath)))
 	if err != nil {
 		panic(err)
 	}
-	configPath := crruentDir + configFile
+	configPath := projectPath + configFile
 
+	// 解析命令行参数
+	var flagConfParam string
+	flag.StringVar(&flagConfParam, "conf", configPath, "conf")
+	testing.Init()
+	flag.Parse()
+	configPath = flagConfParam
+	if err != nil {
+		panic(err)
+	}
 	if !fileExist(configPath) {
 		panic(errors.New("配置文件不存在"))
 	}
 
-	len := len(os.Args)
-	if len > 1 {
-		dir := os.Args[1]
-		if dir != "" {
-			configPath = dir + configFile
-		}
-	}
 	// 加载配置文件
 	File, err = ini.Load(configPath)
 	if err != nil {

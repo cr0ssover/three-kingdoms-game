@@ -34,12 +34,14 @@ func (w *wsServer) Router(router *Router) {
 	w.router = router
 }
 
+// 设置属性
 func (w *wsServer) SetProperty(key string, value interface{}) {
 	w.propertyLock.Lock()
 	defer w.propertyLock.Unlock()
 	w.property[key] = value
 }
 
+// 获取属性
 func (w *wsServer) GetProperty(key string) (interface{}, error) {
 	w.propertyLock.RLock()
 	defer w.propertyLock.RUnlock()
@@ -78,7 +80,6 @@ func (w *wsServer) Start() {
 
 // 写数据
 func (w *wsServer) writeMsgLoop() {
-
 	for {
 		msg := <-w.outChan
 		err := w.writer(msg)
@@ -174,6 +175,7 @@ func (w *wsServer) readMsgLoop() {
 	w.Close()
 }
 
+// 连接关闭
 func (w *wsServer) Close() {
 	_ = w.WsConn.Close()
 }

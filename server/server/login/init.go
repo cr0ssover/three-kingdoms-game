@@ -1,6 +1,7 @@
 package login
 
 import (
+	"github.com/cr0ssover/three-kingdoms-game/server/db"
 	"github.com/cr0ssover/three-kingdoms-game/server/net"
 	"github.com/cr0ssover/three-kingdoms-game/server/server/login/controller"
 )
@@ -9,6 +10,8 @@ import (
 var Router = net.NewRouter()
 
 func Init() {
+	// 初始化数据库
+	db.InitDB()
 	initRouter()
 }
 

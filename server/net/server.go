@@ -22,6 +22,7 @@ func (s *server) Router(router *Router) {
 	s.router = router
 }
 
+// 启动服务
 func (s *server) Start() {
 	http.HandleFunc("/", s.wsHandler)
 	err := http.ListenAndServe(s.addr, nil)
@@ -30,6 +31,7 @@ func (s *server) Start() {
 	}
 }
 
+// http 升级websocket协议配置
 var wsUpgrader = websocket.Upgrader{
 	// 允许所有CORS跨域请求
 	CheckOrigin: func(r *http.Request) bool {
