@@ -18,7 +18,10 @@ func (m *WsMgr) UserLogin(conn WsConner, uid int, token string) {
 	defer m.mux.Unlock()
 	oldConn := m.userCache[uid]
 	if oldConn != nil {
-		oldConn.Push("robLogin", nil)
+		if conn != oldConn {
+			//通过旧客户端 有用户抢登录了
+			oldConn.Push("robLogin", nil)
+		}
 	}
 	m.userCache[uid] = conn
 	conn.SetProperty("uid", uid)

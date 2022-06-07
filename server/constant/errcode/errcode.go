@@ -1,4 +1,4 @@
-package errorcode
+package errcode
 
 const ProxyConnectError = -4 //代理连接失败
 const ProxyNotInConnect = -3 //代理错误

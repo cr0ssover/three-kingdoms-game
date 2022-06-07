@@ -5,11 +5,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/cr0ssover/three-kingdoms-game/server/constant/errorcode"
+	"github.com/cr0ssover/three-kingdoms-game/server/constant/errcode"
 	"github.com/cr0ssover/three-kingdoms-game/server/db"
 	"github.com/cr0ssover/three-kingdoms-game/server/net"
 	"github.com/cr0ssover/three-kingdoms-game/server/server/login/model"
 	"github.com/cr0ssover/three-kingdoms-game/server/server/login/proto"
+	"github.com/cr0ssover/three-kingdoms-game/server/server/models"
 	"github.com/cr0ssover/three-kingdoms-game/server/utils"
 	"github.com/mitchellh/mapstructure"
 )
@@ -24,39 +25,31 @@ func (a *Account) Router(r *net.Router) {
 }
 
 func (a *Account) login(req *net.WsMsgReq, rsp *net.WsMsgRsp) {
-	/**
-	1.用户 密码 硬件ID
-	2.根据用户名查询User表得到数据
-	3.进行密码比对
-	4.保存用户登录记录
-	5.保存用户最后一次登录信息
-	6.客户端需要一个session,jwt
-	*/
 	loginReq := &proto.LoginReq{}
 	// map转结构体
 	mapstructure.Decode(req.Body.Msg, loginReq)
 	fmt.Println(loginReq)
-	user := &model.User{}
+	user := &models.User{}
 	ok, err := db.Engine.Table(user).Where("username = ?", loginReq.Username).Get(user)
 	if err != nil {
 		log.Println("user表查询错误")
-		rsp.Body.Code = errorcode.DBError
+		rsp.Body.Code = errcode.DBError
 		return
 	}
 	if !ok {
-		rsp.Body.Code = errorcode.UserNotExist
+		rsp.Body.Code = errcode.UserNotExist
 		return
 	}
 	// 验证密码
 	pwd := utils.Password(loginReq.Password, user.Passcode)
 	if pwd != user.Passwd {
-		rsp.Body.Code = errorcode.PwdIncorrect
+		rsp.Body.Code = errcode.PwdIncorrect
 		return
 	}
 
 	// 生成token
 	token, _ := utils.Award(user.UId)
-	rsp.Body.Code = errorcode.OK
+	rsp.Body.Code = errcode.OK
 	loginRsp := &proto.LoginRsp{
 		UID:      user.UId,
 		Username: user.Username,
