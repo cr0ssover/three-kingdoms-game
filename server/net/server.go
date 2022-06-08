@@ -8,8 +8,9 @@ import (
 )
 
 type server struct {
-	addr   string
-	router *Router
+	addr       string
+	router     *Router
+	needSecret bool
 }
 
 func NewServer(addr string) *server {
@@ -20,6 +21,11 @@ func NewServer(addr string) *server {
 
 func (s *server) Router(router *Router) {
 	s.router = router
+}
+
+// 需要加密
+func (s *server) NeedSecret(needSecret bool) {
+	s.needSecret = needSecret
 }
 
 // 启动服务

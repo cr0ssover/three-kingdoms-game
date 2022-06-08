@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -28,7 +27,6 @@ func (a *Account) login(req *net.WsMsgReq, rsp *net.WsMsgRsp) {
 	loginReq := &proto.LoginReq{}
 	// map转结构体
 	mapstructure.Decode(req.Body.Msg, loginReq)
-	fmt.Println(loginReq)
 	user := &models.User{}
 	ok, err := db.Engine.Table(user).Where("username = ?", loginReq.Username).Get(user)
 	if err != nil {
@@ -87,14 +85,14 @@ func (a *Account) login(req *net.WsMsgReq, rsp *net.WsMsgRsp) {
 	loginLast.LoginTime = time.Now()
 	loginLast.IsLogout = model.Login
 	if ok {
-		_, err = db.Engine.Table(loginLast).Update(loginLast)
+		_, err = db.Engine.Table(loginLast).Where("uid = ?", user.UId).Update(loginLast)
 		if err != nil {
 			log.Printf("login_last表数据更新数据失败，err:%v", err)
 		}
 	} else {
 		_, err := db.Engine.Table(loginLast).Insert(loginLast)
 		if err != nil {
-			log.Printf("login_last表数据更新数据失败，err:%v", err)
+			log.Printf("login_last表数据插入数据失败，err:%v", err)
 		}
 	}
 

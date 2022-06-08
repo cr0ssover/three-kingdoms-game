@@ -1,6 +1,9 @@
 package net
 
-import "strings"
+import (
+	"log"
+	"strings"
+)
 
 type HandlerFunc func(req *WsMsgReq, rsp *WsMsgRsp)
 
@@ -45,8 +48,8 @@ func (r *Router) Run(req *WsMsgReq, rsp *WsMsgRsp) {
 		name = strs[1]   //路由名称
 	}
 	for _, g := range r.group {
-		// 判断路由前缀是否相等
-		if g.prefix == prefix {
+		// 判断路由前缀是否相等，或是否为全放行
+		if g.prefix == prefix || g.prefix == "*" {
 			g.exec(name, req, rsp)
 		}
 	}
@@ -57,5 +60,13 @@ func (g *group) exec(name string, req *WsMsgReq, rsp *WsMsgRsp) {
 	h := g.handlerMap[name]
 	if h != nil {
 		h(req, rsp)
+	} else {
+		h = g.handlerMap["*"]
+		if h != nil {
+			h(req, rsp)
+		} else {
+			log.Printf("%s 路由未定义\n", name)
+		}
 	}
+
 }

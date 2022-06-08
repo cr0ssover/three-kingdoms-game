@@ -21,13 +21,18 @@ type wsServer struct {
 	propertyLock sync.RWMutex
 }
 
+var cid int64
+
 func NewWsServer(wsConn *websocket.Conn) *wsServer {
-	return &wsServer{
+	s := &wsServer{
 		WsConn:   wsConn,
 		outChan:  make(chan *WsMsgRsp, 10000),
 		property: make(map[string]interface{}),
 		Seq:      0,
 	}
+	cid++
+	s.SetProperty("cid", cid)
+	return s
 }
 
 func (w *wsServer) Router(router *Router) {
@@ -82,15 +87,15 @@ func (w *wsServer) Start() {
 func (w *wsServer) writeMsgLoop() {
 	for {
 		msg := <-w.outChan
-		err := w.writer(msg)
+		err := w.writer(msg.Body)
 		if err != nil {
 			log.Println("数据写入失败:", err)
 		}
 	}
 }
 
-func (w *wsServer) writer(msg *WsMsgRsp) error {
-	data, err := json.Marshal(msg.Body)
+func (w *wsServer) writer(msg interface{}) error {
+	data, err := json.Marshal(msg.(*RspBody))
 	if err != nil {
 		log.Println(err)
 	}
@@ -122,6 +127,7 @@ func (w *wsServer) writer(msg *WsMsgRsp) error {
 func (w *wsServer) readMsgLoop() {
 	defer func() {
 		if err := recover(); err != nil {
+			log.Printf("ws捕捉到异常，err: %v\n", err)
 			w.Close()
 		}
 	}()
@@ -185,10 +191,10 @@ const HandshakeMsg = "handshake"
 func (w *wsServer) Handshake() {
 	var secretKey string
 	key, err := w.GetProperty(secretKey)
-	if err == nil {
-		secretKey = key.(string)
-	} else {
+	if err != nil {
 		secretKey = utils.RandSeq(16)
+	} else {
+		secretKey = key.(string)
 	}
 
 	// 发送secreKey给客户端
