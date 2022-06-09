@@ -1,8 +1,9 @@
 package net
 
 import (
-	"log"
 	"strings"
+
+	"github.com/cr0ssover/three-kingdoms-game/server/logger"
 )
 
 type HandlerFunc func(req *WsMsgReq, rsp *WsMsgRsp)
@@ -65,7 +66,7 @@ func (g *group) exec(name string, req *WsMsgReq, rsp *WsMsgRsp) {
 		if h != nil {
 			h(req, rsp)
 		} else {
-			log.Printf("%s 路由未定义\n", name)
+			logger.Warnf("%s 路由未定义", name)
 		}
 	}
 

@@ -1,11 +1,11 @@
 package controller
 
 import (
-	"log"
 	"time"
 
 	"github.com/cr0ssover/three-kingdoms-game/server/constant/errcode"
 	"github.com/cr0ssover/three-kingdoms-game/server/db"
+	"github.com/cr0ssover/three-kingdoms-game/server/logger"
 	"github.com/cr0ssover/three-kingdoms-game/server/net"
 	"github.com/cr0ssover/three-kingdoms-game/server/server/login/model"
 	"github.com/cr0ssover/three-kingdoms-game/server/server/login/proto"
@@ -30,7 +30,7 @@ func (a *Account) login(req *net.WsMsgReq, rsp *net.WsMsgRsp) {
 	user := &models.User{}
 	ok, err := db.Engine.Table(user).Where("username = ?", loginReq.Username).Get(user)
 	if err != nil {
-		log.Println("user表查询错误")
+		logger.Warn("user表查询错误")
 		rsp.Body.Code = errcode.DBError
 		return
 	}
@@ -66,7 +66,7 @@ func (a *Account) login(req *net.WsMsgReq, rsp *net.WsMsgRsp) {
 	}
 	_, err = db.Engine.Table(loginHistory).Insert(loginHistory)
 	if err != nil {
-		log.Printf("login_historyt表数据插入数据失败，err:%v\n", err)
+		logger.Warn("login_historyt表数据插入数据失败，err: ", err)
 		return
 	}
 
@@ -74,7 +74,7 @@ func (a *Account) login(req *net.WsMsgReq, rsp *net.WsMsgRsp) {
 	loginLast := &model.LoginLast{}
 	ok, err = db.Engine.Table(loginLast).Where("uid = ?", user.UId).Get(loginLast)
 	if err != nil {
-		log.Printf("login_last表数据查询失败，err:%v\n", err)
+		logger.Warn("login_last表数据查询失败，err: ", err)
 		return
 	}
 
@@ -87,12 +87,12 @@ func (a *Account) login(req *net.WsMsgReq, rsp *net.WsMsgRsp) {
 	if ok {
 		_, err = db.Engine.Table(loginLast).Where("uid = ?", user.UId).Update(loginLast)
 		if err != nil {
-			log.Printf("login_last表数据更新数据失败，err:%v", err)
+			logger.Warn("login_last表数据更新数据失败,err: ", err)
 		}
 	} else {
 		_, err := db.Engine.Table(loginLast).Insert(loginLast)
 		if err != nil {
-			log.Printf("login_last表数据插入数据失败，err:%v", err)
+			logger.Warn("login_last表数据插入数据失败,err: ", err)
 		}
 	}
 

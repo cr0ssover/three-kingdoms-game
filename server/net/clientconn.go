@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"log"
 	"sync"
 	"time"
 
+	"github.com/cr0ssover/three-kingdoms-game/server/logger"
 	"github.com/cr0ssover/three-kingdoms-game/server/utils"
 	"github.com/forgoer/openssl"
 	"github.com/gorilla/websocket"
@@ -71,10 +70,10 @@ func (c *ClientConn) waitHandShake() bool {
 	if !c.handshake {
 		select {
 		case <-c.handshakeChan:
-			log.Println("握手成功")
+			logger.Info("握手成功")
 			return true
 		case <-ctx.Done():
-			log.Println("握手超时")
+			logger.Warn("握手超时")
 			return false
 		}
 	}
@@ -86,7 +85,7 @@ func (c *ClientConn) waitHandShake() bool {
 func (c *ClientConn) wsReadLoop() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println("捕捉到异常", err)
+			logger.Error("捕捉到异常", err)
 			c.Close()
 		}
 	}()
@@ -94,13 +93,13 @@ func (c *ClientConn) wsReadLoop() {
 	for {
 		_, data, err := c.wsConn.ReadMessage()
 		if err != nil {
-			log.Println("接收消息出现错误,err: ", err)
+			logger.Warn("接收消息出现错误,err: ", err)
 			break
 		}
 		// 解压数据
 		data, err = utils.UnZip(data)
 		if err != nil {
-			log.Println("数据解压出错,非法格式,err: ", err)
+			logger.Warn("数据解压出错,非法格式,err: ", err)
 			continue
 		}
 
@@ -110,7 +109,7 @@ func (c *ClientConn) wsReadLoop() {
 			key := secretKey.(string)
 			data, err = utils.AesCBCDecrypt(data, []byte(key), []byte(key), openssl.ZEROS_PADDING)
 			if err != nil {
-				log.Println("数据格式有误，解密失败,err: ", err)
+				logger.Warn("数据格式有误，解密失败,err: ", err)
 				return
 			}
 		}
@@ -118,7 +117,7 @@ func (c *ClientConn) wsReadLoop() {
 		body := &RspBody{}
 		err = json.Unmarshal(data, body)
 		if err != nil {
-			log.Println("反序列化数据失败，err: ", err)
+			logger.Warn("反序列化数据失败，err: ", err)
 			return
 		}
 
@@ -149,7 +148,7 @@ func (c *ClientConn) wsReadLoop() {
 			ctx.outChan <- body
 		} else {
 			if body.Seq > 0 {
-				log.Println("no seq syncCtx find")
+				logger.Warn("no seq syncCtx find")
 			}
 		}
 
@@ -163,10 +162,10 @@ func (s *syncCtx) wait() *RspBody {
 	defer s.cancel()
 	select {
 	case msg := <-s.outChan:
-		fmt.Println("代理服务器发送来的数据，msg: ", msg)
+		logger.Info("代理服务器发送来的数据,msg: ", msg)
 		return msg
 	case <-s.ctx.Done():
-		log.Println("代理服务响应超时")
+		logger.Warn("代理服务器响应超时")
 		return nil
 	}
 }
@@ -222,33 +221,33 @@ func (c *ClientConn) write(body interface{}) error {
 	// 反序列化数据
 	data, err := json.Marshal(body)
 	if err != nil {
-		log.Println("序列化数据出错,err: ", err)
+		logger.Warn("序列化数据出错,err: ", err)
 		return err
 	}
 	// 获取密钥
 	secretKey, err := c.GetProperty("secretKey")
 	if err != nil {
-		log.Println("获取secretKey失败,err: ", err)
+		logger.Warn("获取secretKey失败,err: ", err)
 		return err
 	}
 	// 数据加密
 	key := secretKey.(string)
 	data, err = utils.AesCBCEncrypt(data, []byte(key), []byte(key), openssl.ZEROS_PADDING)
 	if err != nil {
-		log.Println("数据加密出错,err: ", err)
+		logger.Warn("数据加密出错,err: ", err)
 		return err
 	}
 	// 数据压缩
 	data, err = utils.Zip(data)
 	if err != nil {
-		log.Println("数据压缩出错,err: ", err)
+		logger.Warn("数据压缩出错,err: ", err)
 		return err
 	}
 
 	// 发送数据
 	err = c.wsConn.WriteMessage(websocket.BinaryMessage, data)
 	if err != nil {
-		log.Println("数据发送出错,err: ", err)
+		logger.Warn("数据发送出错,err: ", err)
 		return err
 	}
 

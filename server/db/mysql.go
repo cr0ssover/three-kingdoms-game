@@ -2,9 +2,9 @@ package db
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/cr0ssover/three-kingdoms-game/server/config"
+	"github.com/cr0ssover/three-kingdoms-game/server/logger"
 	_ "github.com/go-sql-driver/mysql"
 	"xorm.io/xorm"
 )
@@ -14,7 +14,7 @@ var Engine *xorm.Engine
 func InitDB() {
 	mysqlConfig, err := config.File.GetSection("mysql")
 	if err != nil {
-		log.Println("读取数据库配置出错")
+		logger.Error("读取数据库配置出错")
 		panic(err)
 	}
 	host := mysqlConfig.Key("host").MustString("localhost")
@@ -38,12 +38,12 @@ func InitDB() {
 	)
 	Engine, err = xorm.NewEngine("mysql", dbConn)
 	if err != nil {
-		log.Println("数据库连接失败")
+		logger.Error("数据库连接失败")
 		panic(err)
 	}
 	err = Engine.Ping()
 	if err != nil {
-		log.Println("数据库连接测试失败")
+		logger.Error("数据库连接测试失败")
 		panic(err)
 	}
 	Engine.SetMaxIdleConns(maxIdle)

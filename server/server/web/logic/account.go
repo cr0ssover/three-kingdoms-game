@@ -1,11 +1,11 @@
 package logic
 
 import (
-	"log"
 	"time"
 
 	"github.com/cr0ssover/three-kingdoms-game/server/constant/errcode"
 	"github.com/cr0ssover/three-kingdoms-game/server/db"
+	"github.com/cr0ssover/three-kingdoms-game/server/logger"
 	"github.com/cr0ssover/three-kingdoms-game/server/server/common"
 	"github.com/cr0ssover/three-kingdoms-game/server/server/models"
 	"github.com/cr0ssover/three-kingdoms-game/server/server/web/model"
@@ -22,7 +22,7 @@ func (*AccountLogic) Register(req *model.RegisterReq) error {
 	user := &models.User{}
 	ok, err := db.Engine.Table(user).Where("username=?", username).Get(user)
 	if err != nil {
-		log.Printf("注册查询失败,err: %v", err)
+		logger.Warn("注册数据查询失败,err: %v", err)
 		return common.New(errcode.DBError, "数据库异常")
 	}
 	if ok {
@@ -36,7 +36,7 @@ func (*AccountLogic) Register(req *model.RegisterReq) error {
 	user.Hardware = req.Hardware
 	_, err = db.Engine.Table(user).Insert(user)
 	if err != nil {
-		log.Printf("注册插入失败,err: %v", err)
+		logger.Warn("注册数据插入失败,err: %v", err)
 		return common.New(errcode.DBError, "数据库异常")
 	}
 

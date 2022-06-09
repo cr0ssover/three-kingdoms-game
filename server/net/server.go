@@ -1,9 +1,9 @@
 package net
 
 import (
-	"log"
 	"net/http"
 
+	"github.com/cr0ssover/three-kingdoms-game/server/logger"
 	"github.com/gorilla/websocket"
 )
 
@@ -48,9 +48,9 @@ var wsUpgrader = websocket.Upgrader{
 func (s *server) wsHandler(w http.ResponseWriter, r *http.Request) {
 	wsConn, err := wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Fatal("websocket服务连接出错:", err)
+		logger.Warn("websocket服务连接出错:", err)
 	}
-	log.Println("websocket服务连接成功")
+	logger.Info("websocket服务连接成功")
 	wsServer := NewWsServer(wsConn)
 	wsServer.Router(s.router)
 	wsServer.Start()

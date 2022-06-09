@@ -3,12 +3,14 @@ package net
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"sync"
+	"time"
 
+	"github.com/cr0ssover/three-kingdoms-game/server/logger"
 	"github.com/cr0ssover/three-kingdoms-game/server/utils"
 	"github.com/forgoer/openssl"
 	"github.com/gorilla/websocket"
+	"github.com/mitchellh/mapstructure"
 )
 
 // websocket 服务
@@ -89,7 +91,7 @@ func (w *wsServer) writeMsgLoop() {
 		msg := <-w.outChan
 		err := w.writer(msg.Body)
 		if err != nil {
-			log.Println("数据写入失败:", err)
+			logger.Warn("数据写入失败:", err)
 		}
 	}
 }
@@ -97,7 +99,7 @@ func (w *wsServer) writeMsgLoop() {
 func (w *wsServer) writer(msg interface{}) error {
 	data, err := json.Marshal(msg.(*RspBody))
 	if err != nil {
-		log.Println(err)
+		logger.Warn(err)
 	}
 	secretKey, err := w.GetProperty("secretKey")
 	if err == nil {
@@ -105,7 +107,7 @@ func (w *wsServer) writer(msg interface{}) error {
 		key := secretKey.(string)
 		data, err := utils.AesCBCEncrypt(data, []byte(key), []byte(key), openssl.ZEROS_PADDING)
 		if err != nil {
-			log.Println(err)
+			logger.Warn("ws消息加密出错,err: ", err)
 		}
 		// 压缩数据
 		if data, err := utils.Zip(data); err == nil {
@@ -117,6 +119,7 @@ func (w *wsServer) writer(msg interface{}) error {
 			}
 		} else {
 			// 压缩失败返回错误
+			logger.Warn("ws消息压缩出错,err: ", err)
 			return err
 		}
 	}
@@ -127,7 +130,7 @@ func (w *wsServer) writer(msg interface{}) error {
 func (w *wsServer) readMsgLoop() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("ws捕捉到异常，err: %v\n", err)
+			logger.Warn("ws捕捉到异常，err: ", err)
 			w.Close()
 		}
 	}()
@@ -136,13 +139,13 @@ func (w *wsServer) readMsgLoop() {
 		// 读取数据
 		_, data, err := w.WsConn.ReadMessage()
 		if err != nil {
-			log.Println("收消息出现错误:", err)
+			logger.Warn("收消息出现错误:", err)
 			break
 		}
 		// 数据解压
 		data, err = utils.UnZip(data)
 		if err != nil {
-			log.Println("解压数据出错:", err)
+			logger.Warn("解压数据出错:", err)
 			continue
 		}
 
@@ -154,7 +157,7 @@ func (w *wsServer) readMsgLoop() {
 			// 数据解密
 			d, err := utils.AesCBCDecrypt(data, []byte(key), []byte(key), openssl.ZEROS_PADDING)
 			if err != nil {
-				log.Println("数据格式有误，解密失败:", err)
+				logger.Warn("数据格式有误，解密失败:", err)
 				// 出错后发起握手
 				w.Handshake()
 			} else {
@@ -166,7 +169,7 @@ func (w *wsServer) readMsgLoop() {
 		body := &ReqBody{}
 		err = json.Unmarshal(data, body)
 		if err != nil {
-			log.Println("解析数据失败:", err)
+			logger.Warn("解析数据失败,err", err)
 		} else {
 			// 获取到数据后进行处理
 			req := &WsMsgReq{Conn: w, Body: body}
@@ -174,7 +177,15 @@ func (w *wsServer) readMsgLoop() {
 				Name: body.Name,
 				Seq:  req.Body.Seq,
 			}}
-			w.router.Run(req, rsp)
+			// 是否为心跳
+			if req.Body.Name == "heartbeat" {
+				heartbeate := &Heartbeate{}
+				mapstructure.Decode(req.Body.Msg, heartbeate)
+				heartbeate.Stime = time.Now().UnixNano() / 1e6
+				rsp.Body.Msg = heartbeate
+			} else {
+				w.router.Run(req, rsp)
+			}
 			w.outChan <- rsp
 		}
 	}

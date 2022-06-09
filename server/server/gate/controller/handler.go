@@ -1,12 +1,12 @@
 package controller
 
 import (
-	"log"
 	"strings"
 	"sync"
 
 	"github.com/cr0ssover/three-kingdoms-game/server/config"
 	"github.com/cr0ssover/three-kingdoms-game/server/constant/errcode"
+	"github.com/cr0ssover/three-kingdoms-game/server/logger"
 	"github.com/cr0ssover/three-kingdoms-game/server/net"
 )
 
@@ -35,10 +35,13 @@ func (h *Handler) all(req *net.WsMsgReq, rsp *net.WsMsgRsp) {
 	proxyStr := ""
 	if isAccount(name) {
 		proxyStr = h.loginProxy
+	} else {
+		proxyStr = h.gameProxy
 	}
 
 	if proxyStr == "" {
 		rsp.Body.Code = errcode.ProxyNotInConnect
+		logger.Warn("未找到代理客户端")
 		return
 	}
 
@@ -52,7 +55,7 @@ func (h *Handler) all(req *net.WsMsgReq, rsp *net.WsMsgRsp) {
 
 	cidValue, err := req.Conn.GetProperty("cid")
 	if err != nil {
-		log.Println("获取cid失败,err: ", err)
+		logger.Warn("获取cid失败,err: ", err)
 		rsp.Body.Code = errcode.InvalidParam
 		return
 	}
@@ -65,11 +68,11 @@ func (h *Handler) all(req *net.WsMsgReq, rsp *net.WsMsgRsp) {
 		h.proxyMutex.Unlock()
 		err := proxy.Connect()
 		if err != nil {
+			logger.Warn("向代理客户端发起连接异常,err: ", err)
 			h.proxyMutex.Lock()
 			delete(h.proxyMap[proxyStr], cid)
 			h.proxyMutex.Unlock()
 			rsp.Body.Code = errcode.ProxyConnectError
-			log.Println(err)
 			return
 		}
 		proxy.SetProperty("cid", cid)
@@ -81,7 +84,7 @@ func (h *Handler) all(req *net.WsMsgReq, rsp *net.WsMsgRsp) {
 	rsp.Body.Name = req.Body.Name
 	r, err := proxy.Send(req.Body.Name, req.Body.Msg)
 	if err != nil {
-		log.Println("发送异常，err: ", err)
+		logger.Warn("代理服务器数据发送异常,err: ", err)
 		rsp.Body.Code = errcode.ProxyConnectError
 		rsp.Body.Msg = nil
 	}
@@ -96,7 +99,7 @@ func isAccount(name string) bool {
 func (h *Handler) onPush(conn *net.ClientConn, body *net.RspBody) {
 	gc, err := conn.GetProperty("gateConn")
 	if err != nil {
-		log.Println("onPush gateConn,err: ", err)
+		logger.Warn("onPush gateConn,err: ", err)
 		return
 	}
 	gateConn := gc.(net.WsConner)
