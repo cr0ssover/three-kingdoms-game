@@ -9,8 +9,8 @@ import (
 )
 
 func main() {
-	host := config.File.Section("gate_proxy").Key("host").MustString("127.0.0.1")
-	port := config.File.Section("gate_proxy").Key("port").MustString("8004")
+	host := config.File.Section("game_proxy").Key("host").MustString("127.0.0.1")
+	port := config.File.Section("game_proxy").Key("port").MustString("8001")
 
 	s := net.NewServer(fmt.Sprintf("%s:%s", host, port))
 	s.NeedSecret(true)
