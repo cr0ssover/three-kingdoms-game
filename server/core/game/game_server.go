@@ -5,7 +5,7 @@ import (
 
 	"github.com/cr0ssover/three-kingdoms-game/server/config"
 	"github.com/cr0ssover/three-kingdoms-game/server/net"
-	"github.com/cr0ssover/three-kingdoms-game/server/server/gate"
+	"github.com/cr0ssover/three-kingdoms-game/server/server/game"
 )
 
 func main() {
@@ -13,8 +13,7 @@ func main() {
 	port := config.File.Section("game_proxy").Key("port").MustString("8001")
 
 	s := net.NewServer(fmt.Sprintf("%s:%s", host, port))
-	s.NeedSecret(true)
-	gate.Init()
-	s.Router(gate.Router)
+	game.Init()
+	s.Router(game.Router)
 	s.Start()
 }

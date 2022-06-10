@@ -1,11 +1,15 @@
 package data
 
-import "time"
+import (
+	"time"
+
+	"github.com/cr0ssover/three-kingdoms-game/server/server/game/model"
+)
 
 // 玩家表
 type Role struct {
-	RId        int       `xorm:"int(0) 'r_id' pk autoincr comment('roleId')"`
-	UId        int       `xorm:"int(0) 'u_id' notnull comment('用户UID')"`
+	RId        int       `xorm:"int(0) 'rid' pk autoincr comment('roleId')"`
+	UId        int       `xorm:"int(0) 'uid' notnull comment('用户UID')"`
 	Nickname   string    `xorm:"varchar(100) 'nickname'  comment('昵称')" validate:"min=4,max=20,regexp=^[a-zA-Z0-9_]*$"`
 	Balance    int       `xorm:"int(0) 'balance' default('0') comment('余额')"`
 	HeadId     int16     `xorm:"int 'headId' notnull   comment('头像ID')"`
@@ -18,4 +22,16 @@ type Role struct {
 
 func (r *Role) TableName() string {
 	return "role"
+}
+
+func (r *Role) ToModel() model.Role {
+	p := model.Role{}
+	p.Balance = r.Balance
+	p.HeadId = r.HeadId
+	p.Nickname = r.Nickname
+	p.Profile = r.Profile
+	p.RId = r.RId
+	p.Sex = r.Sex
+	p.UId = r.UId
+	return p
 }

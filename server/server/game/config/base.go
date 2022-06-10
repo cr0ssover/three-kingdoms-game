@@ -99,7 +99,7 @@ var Base = &basic{}
 var projectPath = os.Getenv("TKG_PROJECT_PAHT")
 
 // 基础配置文件路径
-const basicFile string = "/config/game/basic.json"
+const basicFile string = "/conf/game/basic.json"
 
 func (b *basic) Load() {
 	configPath := projectPath + basicFile

@@ -101,29 +101,36 @@ func (w *wsServer) writer(msg interface{}) error {
 	if err != nil {
 		logger.Warn(err)
 	}
+
+	// 获取密钥
 	secretKey, err := w.GetProperty("secretKey")
-	if err == nil {
-		// 数据加密
-		key := secretKey.(string)
-		data, err := utils.AesCBCEncrypt(data, []byte(key), []byte(key), openssl.ZEROS_PADDING)
-		if err != nil {
-			logger.Warn("ws消息加密出错,err: ", err)
-		}
-		// 压缩数据
-		if data, err := utils.Zip(data); err == nil {
-			// 写数据
-			if err = w.WsConn.WriteMessage(websocket.BinaryMessage, data); err != nil {
-				// 写入失败关闭连接
-				w.Close()
-				return err
-			}
-		} else {
-			// 压缩失败返回错误
-			logger.Warn("ws消息压缩出错,err: ", err)
-			return err
-		}
+	if err != nil {
+		return err
 	}
-	return err
+	logger.Info("服务端写入数据:", string(data))
+	// 数据加密
+	key := secretKey.(string)
+	data, err = utils.AesCBCEncrypt(data, []byte(key), []byte(key), openssl.ZEROS_PADDING)
+	if err != nil {
+		logger.Warn("ws消息加密出错,err: ", err)
+		return err
+	}
+
+	// 压缩数据
+	if data, err = utils.Zip(data); err != nil {
+		// 压缩失败返回错误
+		logger.Warn("ws消息压缩出错,err: ", err)
+		return err
+	}
+
+	// 写数据
+	if err = w.WsConn.WriteMessage(websocket.BinaryMessage, data); err != nil {
+		// 写入失败关闭连接
+		w.Close()
+		return err
+	}
+
+	return nil
 }
 
 // 读数据
