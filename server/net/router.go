@@ -17,8 +17,13 @@ type Router struct {
 	group []*group
 }
 
-// 初始化路由组
+// 新建路由组
 func (r *Router) NewGroup(prefix string) *group {
+	for _, v := range r.group {
+		if v.prefix == prefix {
+			return v
+		}
+	}
 	g := &group{
 		prefix:     prefix,
 		handlerMap: make(map[string]HandlerFunc),
@@ -52,6 +57,7 @@ func (r *Router) Run(req *WsMsgReq, rsp *WsMsgRsp) {
 		// 判断路由前缀是否相等，或是否为全放行
 		if g.prefix == prefix || g.prefix == "*" {
 			g.exec(name, req, rsp)
+			break
 		}
 	}
 }
@@ -69,5 +75,4 @@ func (g *group) exec(name string, req *WsMsgReq, rsp *WsMsgRsp) {
 			logger.Warnf("%s 路由未定义", name)
 		}
 	}
-
 }

@@ -4,7 +4,9 @@ import (
 	"os"
 	"time"
 
-	gojwt "github.com/dgrijalva/jwt-go"
+	// gojwt "github.com/dgrijalva/jwt-go"
+	// gojwt "github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 var jwtKey []byte
@@ -15,37 +17,31 @@ func init() {
 
 type Claims struct {
 	Uid int
-	gojwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
-// 生成Token
 func Award(uid int) (string, error) {
 	// 过期时间 默认7天
 	expireTime := time.Now().Add(7 * 24 * time.Hour)
 	claims := &Claims{
 		Uid: uid,
-		StandardClaims: gojwt.StandardClaims{
-			ExpiresAt: expireTime.Unix(),
-			IssuedAt:  time.Now().Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expireTime),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
-	// 生成token
-	token := gojwt.NewWithClaims(gojwt.SigningMethodHS256, claims)
-	tokenStr, err := token.SignedString(jwtKey)
-	if err != nil {
-		return "", err
-	}
-	return tokenStr, nil
+	tokenClaims := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token, err := tokenClaims.SignedString(jwtKey)
+	return token, err
 }
 
-// 解析token
-func ParseToken(tokenStr string) (*gojwt.Token, *Claims, error) {
+func ParseToken(tokenStr string) (*jwt.Token, *Claims, error) {
 	claims := &Claims{}
-	token, err := gojwt.ParseWithClaims(tokenStr, claims, func(t *gojwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
 	if err != nil {
 		return nil, nil, err
 	}
-	return token, claims, err
+	return token, claims, nil
 }
